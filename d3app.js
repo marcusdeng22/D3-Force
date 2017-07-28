@@ -1314,24 +1314,18 @@ var nodes = [];			//contains current shown nodes
 var colors = d3.scale.category20();
 var selVarColor = '#fa8072';    //d3.rgb("salmon");
 
-nodes.push({"name": "source" + 0, "nodeCol": colors(0), "strokeColor": selVarColor, "actor": "source", "actorID": 0});
-nodes.push({"name": "target" + 0, "nodeCol": colors(0), "strokeColor": selVarColor, "actor": "target", "actorID": 0});
+function nodeObj(name, color, actorType, actorID) {
+	this.name = name;
+	this.nodeCol = color;
+	this.actor = actorType;
+	this.actorID = actorID;
+}
+
+nodes.push(new nodeObj("source0", colors(0), "source", 0));
+nodes.push(new nodeObj("target0", colors(0), "target", 0));
 
 var sourceCount = 0;
 var targetCount = 0;
-
-//~ for (i=0;i<valueKey.length;i++) {
-  //~ //MWD		definition of node object	!!!
-  //~ var actor;
-	//~ if (i < valueKey.length/2)
-		//~ actor = "source";
-	//~ else
-		//~ actor = "target";
-  //~ var obj1 = {id:i, "name": valueKey[i], "nodeCol":colors(i), "strokeColor": selVarColor, "actor": actor};
-  
-  //~ allNodes.push(obj1);
-  //~ nodes.push(obj1);
-//~ }
 
 var force = d3.layout.force().nodes(nodes).links(links).size([width, height]).linkDistance(150).charge(-800).start();
 
@@ -1362,7 +1356,7 @@ function updateSVG(){
 	node = node.data(nodes, function(d){return d.name;});
 
 	var innerNode = node.enter().append("g").attr("id", function(d){return d.name + "Group";}).call(node_drag);
-	innerNode.append("circle").attr("class", "node").attr("r", allR).style('fill', function(d){return d.nodeCol;}).style('opacity', "0.5").style('stroke', function(d) {return d3.rgb(d.strokeColor).toString();}).style("pointer-events", "all");
+	innerNode.append("circle").attr("class", "node").attr("r", allR).style('fill', function(d){return d.nodeCol;}).style('opacity', "0.5").style('stroke', selVarColor).style("pointer-events", "all");
 			
 	innerNode.append('svg:text').attr('x', 0).attr('y', 15).attr('class', 'id').text(function(d){return d.name;});
 
@@ -1395,7 +1389,7 @@ $("#sourceAdd").click(function() {
 	$("#sourceDiv").append("<button id='source" + sourceCount + "Add' class='sourceShow' onclick='sourceAdd(this.id)'>+</button>");
 	$("#sourceDiv").append("<button id='source" + sourceCount + "Del' class='sourceDel' onclick='sourceDel(this.id)'>X</button>");
 
-	nodes.push({"name": "source" + sourceCount, "nodeCol": colors(sourceCount), "strokeColor": selVarColor, "actor": "source", "actorID": sourceCount});
+	nodes.push(new nodeObj("source" + sourceCount, colors(sourceCount), "source", sourceCount));
 
 	//update force and svg
 	updateAll();
@@ -1407,7 +1401,7 @@ $("#targetAdd").click(function() {
 	$("#targetDiv").append("<button id='target" + targetCount + "Add' class='targetShow' onclick='targetAdd(this.id)'>+</button>");
 	$("#targetDiv").append("<button id='target" + targetCount + "Del' class='targetDel' onclick='targetDel(this.id)'>X</button>");
 
-	nodes.push({"name": "target" + targetCount, "nodeCol": colors(sourceCount + targetCount), "strokeColor": selVarColor, "actor": "target", "actorID": targetCount});
+	nodes.push(new nodeObj("target" + targetCount, colors(sourceCount + targetCount), "target", targetCount));
 
 	//update force and svg
 	updateAll();
@@ -1415,25 +1409,42 @@ $("#targetAdd").click(function() {
 
 function sourceDel(id) {
 	var cur = id.substring(6, id.length-3);
-	console.log(cur);
+	var index = findNodeIndex("source", cur);
+	if (index < 0)
+		return;
+	nodes.splice(index, 1);
+	updateAll();
 }
 
 function sourceAdd(id) {
 	var cur = id.substring(6, id.length-3);
-	console.log(cur);
+	if (findNodeIndex("source", cur) > -1)
+		return;
+	nodes.push(new nodeObj("source" + cur, colors(cur), "source", cur));
+	updateAll();
 }
 
 function targetDel(id) {
 	var cur = id.substring(6, id.length-3);
-	console.log(cur);
+	var index = findNodeIndex("target", cur);
+	if (index < 0)
+		return;
+	nodes.splice(index, 1);
+	updateAll();
 }
 
 function targetAdd(id) {
 	var cur = id.substring(6, id.length-3);
-	console.log(cur);
+	if (findNodeIndex("target", cur) > -1)
+		return;
+	nodes.push(new nodeObj("target" + cur, colors(sourceCount + cur), "target", cur));
+	updateAll();
 }
 
-//~ function findNodeIndex(nodeID) {
-	//~ for (n in nodes) {
-		//~ if (n.id == nodeID)
-			//~ return 
+function findNodeIndex(nodeActor, nodeActorID) {
+	for (var x = 0; x < nodes.length; x++) {
+		if (nodes[x].actor == nodeActor && nodes[x].actorID == nodeActorID)
+			return x;
+	}
+	return -1;
+}
