@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>D3 Force test</title>
+
+<!--
+    <link rel="shortcut icon" href="images/favicon.ico?v=1" type="image/x-icon">-->
+    <link rel="stylesheet" href="bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="bootstrap/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="d3app.css">
+
+<!--
+    <link rel="stylesheet" href="Ladda/dist/ladda-themeless.min.css">
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery.ui.all.css">
+
+    <script src="Ladda/dist/spin.min.js"></script>
+    <script src="Ladda/dist/ladda.min.js"></script>
+-->
+
+    <script type="text/javascript" src="jquery/jquery.min.js"></script>
+    <!-- <script src="https://code.jquery.com/jquery-1.12.4.js"></script> -->
+
+    <!--Used for right panel query tree-->
+<!--
+    <script src="jqtree/tree.jquery.js"></script>
+    <link rel="stylesheet" href="jqtree/jqtree.css">
+-->
+
+    <!--NOTE: JQuery-ui must be loaded before bootstrap-->
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<!--
+    <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
+-->
+
+    <script type="text/javascript" src="d3.v3.min.js"></script>
+<!--
+    <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>	//cannot use this or force.start() does not work
+-->
+    <!-- <script type="text/javascript" src="plots.js"></script> -->
+
+<!--
+<style>
+.node {
+    fill: #ccc;
+    stroke: #fff;
+    stroke-width: 2px;
+}
+
+.link {
+    stroke: #777;
+    stroke-width: 2px;
+}
+</style>
+-->
+</head>
+
+<body>
+	<div id="main" style="border: 1px solid black; width: 800px; height:700px; margin: auto;">
+		<div id="sourceContainer" style="width:50%; float:left;">
+			<div id="sourceDiv">
+				<input id="source0" class="sourceName" type="text" value="source0">
+				<button id="source0Add" class="sourceShow" onclick="sourceAdd(this.id)">+</button>
+				<button id="source0Del" class="sourceDel" onclick="sourceDel(this.id)">X</button>
+			</div>
+			<button id="sourceAdd">Add</button>
+		</div>
+		<div id="targetContainer" style="width:50%; float:left;">
+			<div id="targetDiv">
+				<input id="target0" class="targetName" type="text" value="target0">
+				<button id="target0Add" class="targetShow" onclick="targetAdd(this.id)">+</button>
+				<button id="target0Del" class="targetDel" onclick="targetDel(this.id)">X</button>
+			</div>
+			<button id="targetAdd">Add</button>
+		</div>
+		
+		<svg id="svgMain" width=640 height=480 style="border: 1px solid blue;"></svg>
+	</div>
+</body>
+<script src="d3app.js"></script>
+</html>

@@ -1,0 +1,52 @@
+svg {
+  background-color: #FFF;
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+path.link {
+  fill: none;
+  stroke: #000;
+  stroke-width: 3px;
+/*
+  cursor: default;
+*/
+	cursor: pointer;
+}
+
+path.link.dragline {
+/*
+  pointer-events: none;
+*/
+}
+
+path.link.hidden {
+  stroke-width: 0;
+}
+
+circle.node {
+  stroke-width: 1.5px;
+  cursor: pointer;
+}
+
+text {
+  font: 12px sans-serif;
+  pointer-events: none;
+}
+
+text.id {
+  text-anchor: middle;
+  font-weight: bold;
+}
+
+.sourceName {
+	width:70%;
+}
+
+.targetName {
+	width:70%;
+}
