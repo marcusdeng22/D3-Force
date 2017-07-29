@@ -1349,24 +1349,87 @@ function dragend(d, i) {
 	force.resume();
 }
 
+svg.append('svg:defs').append('svg:marker').attr('id', 'end-arrow').attr('viewBox', '0 -5 10 10').attr('refX', 6).attr('markerWidth', 3).attr('markerHeight', 3).attr('orient', 'auto').append('svg:path').attr('d', 'M0,-5L10,0L0,5').style('fill', '#000');
 
-var node = svg.append("svg:g").attr("class", "allNodesGroup").selectAll("g");	//must define outside
+svg.append('svg:defs').append('svg:marker').attr('id', 'start-arrow').attr('viewBox', '0 -5 10 10').attr('refX', 4).attr('markerWidth', 3).attr('markerHeight', 3).attr('orient', 'auto').append('svg:path').attr('d', 'M10,-5L0,0L10,5').style('fill', '#000');
+
+//~ var drag_line = svg.append('svg:path').attr('class', 'link dragline hidden').attr('d', 'M0,0L0,0');
+//~ drag_line = svg.append('svg:path').attr('class', 'link dragline hidden').attr('d', 'M0,0L0,0');
+
+svg.on("mouseup", function(d){
+	console.log("mouse up on the SVG");
+	lineMouseup();
+}).on("mousedown", function(d){
+	console.log("mouse down on the SVG")
+}).on("click", function(d){
+	console.log("click on the SVG");
+}).on("contextmenu", function(d){
+	d3.event.preventDefault();
+	console.log("right click on the SVG")
+});
+
+var linkGroup = svg.append("svg:g").attr("class", "allLinksGroup").selectAll("g");
+
+var nodeGroup = svg.append("svg:g").attr("class", "allNodesGroup").selectAll("g");	//must define outside
+
+var drag_line = svg.append('svg:path').attr('class', 'link dragline hidden').attr('d', 'M0,0L0,0');
+
+var originNode = null;
+var destNode = null;
+
 updateSVG();
 function updateSVG(){
-	node = node.data(nodes, function(d){return d.name;});
+	linkGroup = linkGroup.data(links);
 
-	var innerNode = node.enter().append("g").attr("id", function(d){return d.name + "Group";}).call(node_drag);
-	innerNode.append("circle").attr("class", "node").attr("r", allR).style('fill', function(d){return d.nodeCol;}).style('opacity', "0.5").style('stroke', selVarColor).style("pointer-events", "all");
+	
+	nodeGroup = nodeGroup.data(nodes, function(d){return d.name;});		//update data
+
+	var innerNode = nodeGroup.enter().append("g").attr("id", function(d){return d.name + "Group";}).call(node_drag);
+	innerNode.append("circle").attr("class", "node").attr("r", allR).style('fill', function(d){return d.nodeCol;}).style('opacity', "0.5").style('stroke', selVarColor).style("pointer-events", "all")
+	.on("click", function(d){
+		console.log("clicked on innerNode");
+		console.log(d);
+	})
+	.on("contextmenu", function(d){
+		d3.event.preventDefault();
+		d3.event.stopPropagation();		//prevents mouseup on node
+		console.log("right clicked on innerNode");
+		console.log(d);
+
+		originNode = d;		//create this var as null init
+
+		drag_line
+            .style('marker-end', 'url(#end-arrow)')		//condition to flip this if target -> source?
+            .classed('hidden', false)
+            .attr('d', 'M' + originNode.x + ',' + originNode.y + 'L' + originNode.x + ',' + originNode.y);
+
+		svg.on('mousemove', lineMousemove);
+	})
+	.on("mouseup", function(d){
+		d3.event.stopPropagation();		//prevents mouseup on svg
+		console.log("mouse up on innerNode");
+		console.log(d);
+		if (d3.event.which == 3)
+			console.log("detected mouse up on right click");
+	})
+	.on("mousedown", function(d){
+		//~ d3.event.stopPropagation();		//cannot call this in order to drag nodes
+		console.log("mouse down on innerNode");
+		console.log(d);
+		if (d3.event.which == 3)
+			console.log("detected mouse down on right click");
+	})
+	;
 			
 	innerNode.append('svg:text').attr('x', 0).attr('y', 15).attr('class', 'id').text(function(d){return d.name;});
 
-	node.exit().remove();
+	nodeGroup.exit().remove();
 }
 
 force.on("tick", tick);
 
 function tick() {
-	node.attr("transform", function(d) {
+	nodeGroup.attr("transform", function(d) {
 		d.x = Math.max(allR, Math.min(width - allR, d.x));
 		d.y = Math.max(allR, Math.min(height - allR, d.y));
 		if (d.actor == "source" && d.x > boundaryLeft)
@@ -1375,6 +1438,27 @@ function tick() {
 			d.x = boundaryRight;
 		return "translate(" + d.x + "," + d.y + ")";
 	});
+}
+
+function lineMousemove() {
+	if(!originNode) return;
+
+	// update drag line
+	drag_line.attr('d', 'M' + originNode.x + ',' + originNode.y + 'L' + d3.mouse(this)[0] + ',' + d3.mouse(this)[1]);
+}
+
+function lineMouseup() {
+	if(originNode) {
+		// hide drag line
+		drag_line.classed('hidden', true).style('marker-end', '');
+	}    
+	// clear mouse event vars
+	resetMouseVars();
+}
+
+function resetMouseVars() {
+	originNode = null;
+	destNode = null;
 }
 
 function updateAll() {

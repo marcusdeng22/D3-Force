@@ -19,14 +19,13 @@ path.link {
 }
 
 path.link.dragline {
-/*
   pointer-events: none;
-*/
 }
 
 path.link.hidden {
   stroke-width: 0;
 }
+
 
 circle.node {
   stroke-width: 1.5px;
