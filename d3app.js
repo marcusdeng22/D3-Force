@@ -584,7 +584,7 @@ var svg = d3.select("#svgMain");
 var width = 640;
 var height = 480;
 
-var boundaryLeft = 200;
+var boundaryLeft = 300;
 var boundaryRight = 400;
 /*
 var forcetoggle=["true"];
@@ -1321,23 +1321,54 @@ function nodeObj(name, color, actorType, actorID) {
 	this.actorID = actorID;
 }
 
+function linkObj(source, target){
+	this.source = source;
+	this.target = target;
+}
+
 nodes.push(new nodeObj("source0", colors(0), "source", 0));
 nodes.push(new nodeObj("target0", colors(0), "target", 0));
+links.push(new linkObj(nodes[0], nodes[1]));
 
 var sourceCount = 0;
 var targetCount = 0;
 
 var force = d3.layout.force().nodes(nodes).links(links).size([width, height]).linkDistance(150).charge(-800).start();
 
-var node_drag = d3.behavior.drag().on("dragstart", dragstart).on("drag", dragmove).on("dragend", dragend);
+//~ var node_drag = d3.behavior.drag().on("dragstart", dragstart).on("drag", dragmove).on("dragend", dragend);
+var node_drag = force.drag().on("dragstart", dragstart).on("dragend", dragend);
 
 function dragstart(d, i) {
 	force.stop() // stops the force auto positioning before you start dragging
 }
 
 function dragmove(d, i) {
-	d.px += d3.event.dx;
-	d.py += d3.event.dy;
+	//~ d.px += d3.event.dx;
+	//~ d.py += d3.event.dy;
+	//~ d.x = Math.max(allR, Math.min(width - allR, d.x));
+	//~ d.y = Math.max(allR, Math.min(height - allR, d.y));
+	//~ if (d.actor == "source" && d.x > boundaryLeft)
+		//~ d.x = boundaryLeft;
+	//~ if (d.actor == "target" && d.x < boundaryRight)
+		//~ d.x = boundaryRight;
+
+		//~ console.log(d3.mouse(this)[0]);
+
+	//~ if (d.actor == "source" && d.x + d3.event.dx >= allR && d.x + d3.event.dx <= boundaryLeft)
+		//~ d.x += d3.event.dx;
+	//~ else if (d.actor == "target" && d.x + d3.event.dx <= width-allR && d.x + d3.event.dx >= boundaryRight)
+		//~ d.x += d3.event.dx;
+		
+	//~ if (d.x + d3.event.dx >= allR || d.x + d3.event.dx <= width-allR || (d.actor == "source" && d.x + d3.event.dx <= boundaryLeft) || (d.actor == "target" && d.x + d3.event.dx >= boundaryRight))
+		//~ d.x += d3.event.dx;
+
+		//~ if (Math.abs(d3.mouse(this)[0]) < allR)
+			//~ d.x += d3.event.dx;
+		//~ else
+			//~ d.x -= d3.event.dx;
+
+	d.px = Math.max(allR, Math.min(width - allR, d.px));
+	d.py = Math.max(allR, Math.min(height - allR, d.py));
 	d.x += d3.event.dx;
 	d.y += d3.event.dy; 
 	tick(); // this is the key to make it work together with updating both px,py,x,y on d !
@@ -1357,18 +1388,18 @@ svg.append('svg:defs').append('svg:marker').attr('id', 'start-arrow').attr('view
 //~ drag_line = svg.append('svg:path').attr('class', 'link dragline hidden').attr('d', 'M0,0L0,0');
 
 svg.on("mouseup", function(d){
-	console.log("mouse up on the SVG");
+	//~ console.log("mouse up on the SVG");
 	lineMouseup();
 }).on("mousedown", function(d){
-	console.log("mouse down on the SVG")
+	//~ console.log("mouse down on the SVG")
 }).on("click", function(d){
-	console.log("click on the SVG");
+	//~ console.log("click on the SVG");
 }).on("contextmenu", function(d){
 	d3.event.preventDefault();
-	console.log("right click on the SVG")
+	//~ console.log("right click on the SVG")
 });
 
-var linkGroup = svg.append("svg:g").attr("class", "allLinksGroup").selectAll("g");
+var linkGroup = svg.append("svg:g").attr("class", "allLinksGroup").selectAll("path");
 
 var nodeGroup = svg.append("svg:g").attr("class", "allNodesGroup").selectAll("g");	//must define outside
 
@@ -1381,45 +1412,111 @@ updateSVG();
 function updateSVG(){
 	linkGroup = linkGroup.data(links);
 
+	linkGroup.enter().append('svg:path')
+        .attr('class', 'link')
+        .style('marker-start', function(d) { return d.source.actor == "target" ? 'url(#start-arrow)' : ''; })
+        .style('marker-end', function(d) { return d.target.actor == "target" ? 'url(#end-arrow)' : ''; })
+        .on('mousedown', function(d) { // do we ever need to select a link? make it delete..
+			console.log("mousedown on connector");		//MWD	this seems to be a mousedown on the connector
+            var obj1 = JSON.stringify(d);
+            for(var j = 0; j < links.length; j++) {		//this removes the links on click
+                if(obj1 === JSON.stringify(links[j])) {
+                    links.splice(j,1);
+                }
+            }
+            updateAll();
+			console.log("all links:");
+			for (var x = 0; x < links.length; x++)
+				console.log(links[x].source.name + "   " + links[x].target.name);
+        })
+        ;
+        
+        // remove old links
+        linkGroup.exit().remove();
+
 	
 	nodeGroup = nodeGroup.data(nodes, function(d){return d.name;});		//update data
 
 	var innerNode = nodeGroup.enter().append("g").attr("id", function(d){return d.name + "Group";}).call(node_drag);
 	innerNode.append("circle").attr("class", "node").attr("r", allR).style('fill', function(d){return d.nodeCol;}).style('opacity', "0.5").style('stroke', selVarColor).style("pointer-events", "all")
 	.on("click", function(d){
-		console.log("clicked on innerNode");
-		console.log(d);
+		//~ console.log("clicked on innerNode");
+		//~ console.log(d);
 	})
 	.on("contextmenu", function(d){
 		d3.event.preventDefault();
 		d3.event.stopPropagation();		//prevents mouseup on node
-		console.log("right clicked on innerNode");
-		console.log(d);
+		//~ console.log("right clicked on innerNode");
+		//~ console.log(d);
 
-		originNode = d;		//create this var as null init
+		originNode = d;
 
-		drag_line
-            .style('marker-end', 'url(#end-arrow)')		//condition to flip this if target -> source?
-            .classed('hidden', false)
-            .attr('d', 'M' + originNode.x + ',' + originNode.y + 'L' + originNode.x + ',' + originNode.y);
+		drag_line.style('marker-end', function(){
+				if (d.actor == "source")
+					return 'url(#end-arrow)';
+				else
+					return '';
+			})
+			.style('marker-start', function(){
+				if (d.actor == "target")
+					return 'url(#start-arrow)';
+				else
+					return '';
+			}).classed('hidden', false).attr('d', 'M' + originNode.x + ',' + originNode.y + 'L' + originNode.x + ',' + originNode.y);
 
 		svg.on('mousemove', lineMousemove);
 	})
 	.on("mouseup", function(d){
 		d3.event.stopPropagation();		//prevents mouseup on svg
-		console.log("mouse up on innerNode");
-		console.log(d);
-		if (d3.event.which == 3)
-			console.log("detected mouse up on right click");
+		//~ console.log("mouse up on innerNode");
+		//~ console.log(d);
+		createLink(d);
 	})
 	.on("mousedown", function(d){
 		//~ d3.event.stopPropagation();		//cannot call this in order to drag nodes
-		console.log("mouse down on innerNode");
-		console.log(d);
-		if (d3.event.which == 3)
-			console.log("detected mouse down on right click");
+		//~ console.log("mouse down on innerNode");
+		//~ console.log(d);
+		createLink(d);
 	})
 	;
+
+	function createLink(d) {
+		if (d3.event.which == 3) {
+			//~ console.log("detected mouse up on right click");
+			return;
+		}
+
+		if(!originNode)
+			return;		//if no origin node selected
+
+		drag_line.classed('hidden', true).style('marker-end', '');		//hide line
+
+		// check for drag-to-self and same actor to actor
+		destNode = d;
+		if (destNode === originNode || destNode.actor == originNode.actor){
+			resetMouseVars();
+			return;
+		}
+
+		//~ console.log("link made!!!!!!!!!!!!!!!!!!!");
+
+		var actualSource = originNode.actor == "source" ? originNode : destNode;
+		var actualTarget = destNode.actor == "target" ? destNode : originNode;
+
+		if (links.filter(function(linkItem){return (linkItem.source == actualSource && linkItem.target == actualTarget);})[0]){
+			console.log("link exists");
+			return;
+		}
+		else {
+			links.push(new linkObj(actualSource, actualTarget));
+			updateAll();
+			console.log("all links:");
+			for (var x = 0; x < links.length; x++)
+				console.log(links[x].source.name + "   " + links[x].target.name);
+		}
+
+		resetMouseVars();
+	}
 			
 	innerNode.append('svg:text').attr('x', 0).attr('y', 15).attr('class', 'id').text(function(d){return d.name;});
 
@@ -1437,6 +1534,22 @@ function tick() {
 		if (d.actor == "target" && d.x < boundaryRight)
 			d.x = boundaryRight;
 		return "translate(" + d.x + "," + d.y + ")";
+	});
+
+	linkGroup.attr('d', function(d){
+		var deltaX = d.target.x - d.source.x,
+		deltaY = d.target.y - d.source.y,
+		dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
+		normX = deltaX / dist,
+		normY = deltaY / dist,
+		sourcePadding = (d.source.actor == "target") ? allR+5 : allR,			//MWD	spacing on the line before arrow head
+		targetPadding = (d.target.actor == "target") ? allR+5 : allR,
+		sourceX = d.source.x + (sourcePadding * normX),
+		sourceY = d.source.y + (sourcePadding * normY),
+		targetX = d.target.x - (targetPadding * normX),
+		targetY = d.target.y - (targetPadding * normY);
+		  
+		return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY;
 	});
 }
 
@@ -1464,6 +1577,7 @@ function resetMouseVars() {
 function updateAll() {
 	force.stop();
 	force = force.nodes(nodes).links(links).start();
+	resetMouseVars();
 	updateSVG();
 }
 
