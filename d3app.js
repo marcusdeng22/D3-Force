@@ -1326,66 +1326,78 @@ function linkObj(source, target){
 	this.target = target;
 }
 
-nodes.push(new nodeObj("source0", colors(0), "source", 0));
-nodes.push(new nodeObj("target0", colors(0), "target", 0));
-links.push(new linkObj(nodes[0], nodes[1]));
+nodes.push(new nodeObj("source0RIPoverflow", colors(0), "source", 0));		//constrain display text to only a few char
+//~ nodes.push(new nodeObj("target0", colors(0), "target", 0));
+//~ links.push(new linkObj(nodes[0], nodes[1]));
 
 var sourceCount = 0;
 var targetCount = 0;
 
 var force = d3.layout.force().nodes(nodes).links(links).size([width, height]).linkDistance(150).charge(-800).start();
 
-//~ var node_drag = d3.behavior.drag().on("dragstart", dragstart).on("drag", dragmove).on("dragend", dragend);
-var node_drag = force.drag().on("dragstart", dragstart).on("dragend", dragend);
+var node_drag = d3.behavior.drag().on("dragstart", dragstart).on("drag", dragmove).on("dragend", dragend);
+
+var dragStarted = false;
+var dragSelect = null;
+var dragTarget = null;
+var dragTargetHTML = null;
+
+d3.selection.prototype.moveToFront = function() {
+	return this.each(function(){
+		this.parentNode.appendChild(this);
+	});
+};
+
+d3.selection.prototype.moveToBack = function() {
+	return this.each(function() {
+		var firstChild = this.parentNode.firstChild;
+		if (firstChild) {
+			this.parentNode.insertBefore(this, firstChild);
+		}
+	});
+};
 
 function dragstart(d, i) {
-	force.stop() // stops the force auto positioning before you start dragging
+	force.stop(); // stops the force auto positioning before you start dragging
+	dragStarted = true;
+	dragSelect = d;
+	d3.select(this).moveToBack();
+	console.log("drag started for: " + d.name);
+	//~ console.log(this);	//note "this" refers to the HTML section for the node
+	d3.event.sourceEvent.stopPropagation();		//allows node below to trigger mouseover
 }
 
 function dragmove(d, i) {
-	//~ d.px += d3.event.dx;
-	//~ d.py += d3.event.dy;
-	//~ d.x = Math.max(allR, Math.min(width - allR, d.x));
-	//~ d.y = Math.max(allR, Math.min(height - allR, d.y));
-	//~ if (d.actor == "source" && d.x > boundaryLeft)
-		//~ d.x = boundaryLeft;
-	//~ if (d.actor == "target" && d.x < boundaryRight)
-		//~ d.x = boundaryRight;
-
-		//~ console.log(d3.mouse(this)[0]);
-
-	//~ if (d.actor == "source" && d.x + d3.event.dx >= allR && d.x + d3.event.dx <= boundaryLeft)
-		//~ d.x += d3.event.dx;
-	//~ else if (d.actor == "target" && d.x + d3.event.dx <= width-allR && d.x + d3.event.dx >= boundaryRight)
-		//~ d.x += d3.event.dx;
-		
-	//~ if (d.x + d3.event.dx >= allR || d.x + d3.event.dx <= width-allR || (d.actor == "source" && d.x + d3.event.dx <= boundaryLeft) || (d.actor == "target" && d.x + d3.event.dx >= boundaryRight))
-		//~ d.x += d3.event.dx;
-
-		//~ if (Math.abs(d3.mouse(this)[0]) < allR)
-			//~ d.x += d3.event.dx;
-		//~ else
-			//~ d.x -= d3.event.dx;
-
-	d.px = Math.max(allR, Math.min(width - allR, d.px));
-	d.py = Math.max(allR, Math.min(height - allR, d.py));
-	d.x += d3.event.dx;
-	d.y += d3.event.dy; 
+	d.x = Math.max(allR, Math.min(width - allR, d3.event.x));
+	d.y = Math.max(allR, Math.min(height - allR, d3.event.y));
 	tick(); // this is the key to make it work together with updating both px,py,x,y on d !
 }
 
 function dragend(d, i) {
 	//~ d.fixed = true; // of course set the node to fixed so the force doesn't include the node in its auto positioning stuff
+	//merge dragSel and dragTarg
+	if (dragTarget){
+		console.log("merging: " + dragSelect.name + " -> " + dragTarget.name);
+		console.log("respective id: " + dragSelect.actorID + "	" + dragTarget.actorID);
+		d3.select(dragTargetHTML).transition().attr("r", allR);
+
+		
+		
+		updateAll();
+	}
+	dragStarted = false;
+	dragSelect = null;
+	dragTarget = null;
+	dragTargetHTML = null;
+	console.log("drag ended for: " + d.name);
 	tick();
 	force.resume();
 }
 
+//define arrow markers
 svg.append('svg:defs').append('svg:marker').attr('id', 'end-arrow').attr('viewBox', '0 -5 10 10').attr('refX', 6).attr('markerWidth', 3).attr('markerHeight', 3).attr('orient', 'auto').append('svg:path').attr('d', 'M0,-5L10,0L0,5').style('fill', '#000');
 
 svg.append('svg:defs').append('svg:marker').attr('id', 'start-arrow').attr('viewBox', '0 -5 10 10').attr('refX', 4).attr('markerWidth', 3).attr('markerHeight', 3).attr('orient', 'auto').append('svg:path').attr('d', 'M10,-5L0,0L10,5').style('fill', '#000');
-
-//~ var drag_line = svg.append('svg:path').attr('class', 'link dragline hidden').attr('d', 'M0,0L0,0');
-//~ drag_line = svg.append('svg:path').attr('class', 'link dragline hidden').attr('d', 'M0,0L0,0');
 
 svg.on("mouseup", function(d){
 	//~ console.log("mouse up on the SVG");
@@ -1431,11 +1443,25 @@ function updateSVG(){
         })
         ;
         
-        // remove old links
-        linkGroup.exit().remove();
+	// remove old links
+	linkGroup.exit().remove();
 
-	
-	nodeGroup = nodeGroup.data(nodes, function(d){return d.name;});		//update data
+	//~ nodeGroup = nodeGroup.data(nodes, function(d){
+		//~ console.log("updating data");
+		//~ console.log(d.name);
+		//~ return d.name;});		//update data		//refering to name may be a problem if user can change name
+
+	nodeGroup = nodeGroup.data(nodes);
+
+	//~ console.log("nodeGroup = ");
+	//~ console.log(nodeGroup);
+	//~ for (var x = 0; x < nodeGroup.length; x ++) {
+		//~ console.log(x);
+		//~ for (var y = 0; y < nodeGroup[x].length; y ++) {
+			//~ console.log(nodeGroup[x][y]);
+		//~ }
+		//~ console.log("end " + x);
+	//~ }
 
 	var innerNode = nodeGroup.enter().append("g").attr("id", function(d){return d.name + "Group";}).call(node_drag);
 	innerNode.append("circle").attr("class", "node").attr("r", allR).style('fill', function(d){return d.nodeCol;}).style('opacity', "0.5").style('stroke', selVarColor).style("pointer-events", "all")
@@ -1478,6 +1504,21 @@ function updateSVG(){
 		//~ console.log(d);
 		createLink(d);
 	})
+	.on("mouseover", function(d){
+		//~ console.log("mouse over node: " + d.name + "||| dragStarted = " + dragStarted);// + "||| dragSelect = " + dragSelect.name);
+		if(dragSelect && dragSelect != d && dragSelect.actor == d.actor) {
+			d3.select(this).transition().attr("r", allR + 10);
+			dragTarget = d;
+			dragTargetHTML = this;
+		}
+	})
+	.on("mouseout", function(d){
+		//~ console.log("mouse out node: " + d.name);
+		//~ if(dragStarted)
+			d3.select(this).transition().attr("r", allR);
+			dragTarget = null;
+			dragTargetHTML = null;
+	})
 	;
 
 	function createLink(d) {
@@ -1517,8 +1558,13 @@ function updateSVG(){
 
 		resetMouseVars();
 	}
-			
+
+	//~ console.log("changing text?");					//innerNode only keeps track of new additions to force nodes
+	//~ for (var x = 0; x < innerNode.length; x ++)
+		//~ console.log(innerNode[x]);
 	innerNode.append('svg:text').attr('x', 0).attr('y', 15).attr('class', 'id').text(function(d){return d.name;});
+
+	svg.selectAll("text").data(nodes).text(function(d){return d.name;});
 
 	nodeGroup.exit().remove();
 }
@@ -1588,6 +1634,7 @@ $("#sourceAdd").click(function() {
 	$("#sourceDiv").append("<button id='source" + sourceCount + "Del' class='sourceDel' onclick='sourceDel(this.id)'>X</button>");
 
 	nodes.push(new nodeObj("source" + sourceCount, colors(sourceCount), "source", sourceCount));
+	//~ nodes.push(new nodeObj("source" + 0, colors(sourceCount), "source", sourceCount));
 
 	//update force and svg
 	updateAll();
@@ -1605,6 +1652,15 @@ $("#targetAdd").click(function() {
 	updateAll();
 });
 
+$(".sourceName").focusout(function() {
+	//~ console.log("focus out");
+	//~ console.log(this);
+	//~ console.log(this.id.substring(6));
+	nodes[this.id.substring(6)].name = $("#" + this.id).val();
+	console.log(nodes[this.id.substring(6)]);
+	updateAll();
+});
+
 function sourceDel(id) {
 	var cur = id.substring(6, id.length-3);
 	var index = findNodeIndex("source", cur);
@@ -1618,7 +1674,7 @@ function sourceAdd(id) {
 	var cur = id.substring(6, id.length-3);
 	if (findNodeIndex("source", cur) > -1)
 		return;
-	nodes.push(new nodeObj("source" + cur, colors(cur), "source", cur));
+	nodes.push(new nodeObj($("#" + window["source" + cur].id).val(), colors(cur), "source", cur));
 	updateAll();
 }
 
