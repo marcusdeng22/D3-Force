@@ -1306,6 +1306,7 @@ function fakeClick() {
 
 
 var allR = 40;
+var padding = 5;
 //~ var valueKey = ["ccode", "country", "cname", "cmark", "year", "custom"];
 //~ var valueKey = [];
 var allNodes = [];		//contains all nodes
@@ -1333,7 +1334,7 @@ nodes.push(new nodeObj("source0RIPoverflow", colors(0), "source", 0));		//constr
 var sourceCount = 0;
 var targetCount = 0;
 
-var force = d3.layout.force().nodes(nodes).links(links).size([width, height]).linkDistance(150).charge(-800).start();
+var force = d3.layout.force().nodes(nodes).links(links).size([width, height]).linkDistance(150).charge(-600).start();
 
 var node_drag = d3.behavior.drag().on("dragstart", dragstart).on("drag", dragmove).on("dragend", dragend);
 
@@ -1451,7 +1452,28 @@ function updateSVG(){
 		//~ console.log(d.name);
 		//~ return d.name;});		//update data		//refering to name may be a problem if user can change name
 
-	nodeGroup = nodeGroup.data(nodes);
+	console.log("in updateSVG");
+	for (var x = 0; x < nodes.length; x ++)
+		console.log(nodes[x]);
+		
+	console.log("before nodegroup");
+	for (var x = 0; x < nodeGroup.data().length; x ++)
+		console.log(nodeGroup.data()[x]);
+		
+	//~ nodeGroup = nodeGroup.data(nodes);
+	nodeGroup = nodeGroup.data(nodes, function(d) {
+		return d.actor + d.actorID;
+	});
+	
+	console.log("after nodegroup");
+	for (var x = 0; x < nodeGroup.data().length; x ++)
+		console.log(nodeGroup.data()[x]);
+	console.log("________________________________________________");
+		//~ nodeGroup = svg.select(".allNodesGroup").selectAll("g").data(nodes);
+
+	console.log("what is enter");
+	for (var x = 0; x < nodeGroup.enter().length; x ++)
+		console.log(nodeGroup.enter()[x]);
 
 	//~ console.log("nodeGroup = ");
 	//~ console.log(nodeGroup);
@@ -1562,16 +1584,33 @@ function updateSVG(){
 	//~ console.log("changing text?");					//innerNode only keeps track of new additions to force nodes
 	//~ for (var x = 0; x < innerNode.length; x ++)
 		//~ console.log(innerNode[x]);
-	innerNode.append('svg:text').attr('x', 0).attr('y', 15).attr('class', 'id').text(function(d){return d.name;});
+	innerNode.append('svg:text').attr('x', 0).attr('y', 15).attr('class', 'id').text(function(d){console.log('adding: ' + d.name);return d.name;});
 
-	svg.selectAll("text").data(nodes).text(function(d){return d.name;});
+	//~ svg.selectAll("text").data(nodes).text(function(d){return d.name;});		//this sometimes flips names around
+	//~ console.log("----------------------------------");
+
 
 	nodeGroup.exit().remove();
+		console.log("updating text");
+	svg.selectAll("text").text(function(d) {
+		console.log(d);
+		return d.name;
+	});
 }
 
 force.on("tick", tick);
 
-function tick() {
+function tick(e) {
+	//~ console.log(e);
+	if (e) {
+		nodes.forEach(function(o, i) {		//o = object, i = index
+			o.x += (o.actor == "source") ? e.alpha * -5 : e.alpha * 5;
+		});
+
+	var q = d3.geom.quadtree(nodes), i = 0, n = nodes.length;
+	while( ++i < n) q.visit(collide(nodes[i]));
+	}
+	
 	nodeGroup.attr("transform", function(d) {
 		d.x = Math.max(allR, Math.min(width - allR, d.x));
 		d.y = Math.max(allR, Math.min(height - allR, d.y));
@@ -1599,6 +1638,32 @@ function tick() {
 	});
 }
 
+function collide(node) {
+  var r = allR + padding,
+      nx1 = node.x - r,
+      nx2 = node.x + r,
+      ny1 = node.y - r,
+      ny2 = node.y + r;
+  //~ console.log("outside " + r + " " + nx1 + " " + nx2 + " " + ny1 + " " + ny2);
+  return function(quad, x1, y1, x2, y2) {
+    if (quad.point && (quad.point !== node)) {
+      var x = node.x - quad.point.x,
+          y = node.y - quad.point.y,
+          l = Math.sqrt(x * x + y * y),
+          r = allR + allR + padding;
+          //~ console.log("inside " + x + " " + y + " " + l + " " + r);
+      if (l < r) {
+        l = (l - r) / l * .5;
+        node.x -= x *= l;
+        node.y -= y *= l;
+        quad.point.x += x;
+        quad.point.y += y;
+      }
+    }
+    return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+  };
+}
+
 function lineMousemove() {
 	if(!originNode) return;
 
@@ -1623,6 +1688,9 @@ function resetMouseVars() {
 function updateAll() {
 	force.stop();
 	force = force.nodes(nodes).links(links).start();
+	console.log("in updateall");
+	//~ for (var x = 0; x < force.nodes().length; x ++)
+		//~ console.log(force.nodes()[x]);
 	resetMouseVars();
 	updateSVG();
 }
@@ -1657,7 +1725,7 @@ $(".sourceName").focusout(function() {
 	//~ console.log(this);
 	//~ console.log(this.id.substring(6));
 	nodes[this.id.substring(6)].name = $("#" + this.id).val();
-	console.log(nodes[this.id.substring(6)]);
+	//~ console.log(nodes[this.id.substring(6)]);
 	updateAll();
 });
 
@@ -1667,14 +1735,23 @@ function sourceDel(id) {
 	if (index < 0)
 		return;
 	nodes.splice(index, 1);
+	for (var x = 0; x < links.length; x ++) {
+		if (links[x].source.actorID == cur) {
+			links.splice(x, 1);
+			x--;
+		}
+	}
 	updateAll();
+	//~ console.log("deleting node");
+	//~ for (var x = 0; x < nodes.length; x ++)
+		//~ console.log(nodes[x]);
 }
 
 function sourceAdd(id) {
 	var cur = id.substring(6, id.length-3);
 	if (findNodeIndex("source", cur) > -1)
 		return;
-	nodes.push(new nodeObj($("#" + window["source" + cur].id).val(), colors(cur), "source", cur));
+	nodes.push(new nodeObj($("#" + window["source" + cur].id).val(), colors(cur), "source", parseInt(cur)));
 	updateAll();
 }
 
@@ -1684,6 +1761,12 @@ function targetDel(id) {
 	if (index < 0)
 		return;
 	nodes.splice(index, 1);
+	for (var x = 0; x < links.length; x ++) {
+		if (links[x].target.actorID == cur) {
+			links.splice(x, 1);
+			x--;
+		}
+	}
 	updateAll();
 }
 
