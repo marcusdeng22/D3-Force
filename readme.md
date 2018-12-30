@@ -3,4 +3,4 @@
 home landing
 ## e2
 link to home 2
-see [this](../page2.html)
+see [this](page2.html)
