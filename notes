@@ -1,3 +1,4 @@
 jsdoc test.js readme.md
 this will create an out folder that has the files, but the gh page does not show the same page
 
+try: jsdoc test.js readme.md read2.md
