@@ -1,4 +1,10 @@
 jsdoc test.js readme.md
 this will create an out folder that has the files, but the gh page does not show the same page
 
-try: jsdoc test.js readme.md read2.md
+try:
+cd mainv2
+jsdoc read2.md ./mainv2/*.js
+cd ..
+jsdoc read.md ./main/*.js
+manually edit v2 index.html
+copy out folder to base dir
